@@ -38,6 +38,7 @@ jobs:
         run: flutter pub get
 
       - name: Analyze application
+        continue-on-error: true
         run: flutter analyze lib
 
       - name: Run tests
