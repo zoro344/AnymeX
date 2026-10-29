@@ -1,6 +1,9 @@
 name: Flux Flutter Checks
 
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -8,6 +11,7 @@ permissions:
 jobs:
   flutter-checks:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -16,7 +20,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -24,28 +28,36 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Show Java version
-        run: java -version
-
       - name: Show Flutter version
         run: flutter --version
+
+      - name: Create environment file for CI
+        run: touch .env
 
       - name: Install dependencies
         run: flutter pub get
 
       - name: Analyze application
-        run: flutter analyze --no-pub --no-fatal-warnings --no-fatal-infos lib
+        run: flutter analyze lib
 
       - name: Run tests
         run: |
-          if [ -d test ]; then
+          if [ -d test ] && find test -type f -name '*_test.dart' | grep -q .; then
             flutter test
           else
-            echo "No test/ directory found; skipping tests."
+            echo "No Dart test files found; skipping tests."
           fi
-
-      - name: Create empty environment file for CI
-        run: touch .env
 
       - name: Build debug APK
         run: flutter build apk --debug
+
+      - name: Verify APK exists
+        run: test -f build/app/outputs/flutter-apk/app-debug.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Flux-APK
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
